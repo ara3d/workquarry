@@ -2,18 +2,23 @@
 
 **Help agents break big rocks up into small rocks.**
 
-A skill-set and process for helping AI coding agents manage work. The mechanism underneath is
-deliberately small: markdown files with YAML frontmatter as the database, one dependency-free
-Python script as the only mutation path, and agent skills that *elaborate* an idea or a bug —
-search for prior art, draft the design forks, propose the simplest implementation — instead of
-just filing a title. No server, no account, no SaaS. Everything versions with your code.
+WorkQuarry is a skill-set and process that helps AI coding agents manage work. It tracks
+features, bugs, technical debt, ideas, and design questions as plain markdown files inside
+your repository. There is no server, no account, and no web application. The entire mechanism
+is a folder of markdown files, one small Python script, and a set of instructions that
+coding agents follow.
 
-This README is an honest assessment, not a pitch: what it's good for, where it's untested,
-what's genuinely novel versus reinvented, and who shouldn't use it yet.
+Because everything is a file in your repository, your work history is versioned together
+with your code, and any agent that can read, write, and search files can use the system.
 
-## At a glance
+This README is a frank assessment as much as an introduction. It explains what the system
+does well, what is untested, what is borrowed from earlier tools, and who should not use it
+yet.
 
-One file per tracked item; frontmatter is the source of truth:
+## How it works
+
+Every tracked item is one markdown file. The file starts with a YAML header that holds the
+item's state, followed by a free-form body:
 
 ```yaml
 ---
@@ -24,18 +29,24 @@ status: ready          # idea | ready | in-progress | done | dropped
 priority: p1           # p1 | p2 | p3 | ?
 effort: S              # S | M | L | ?
 risk: low              # low | med | high | ?
-area: studio           # your areas, from tracker/config.json
-sprint:                # working set name, empty = not selected
+area: studio           # your project areas, defined in tracker/config.json
+sprint:                # name of the current working set, or empty
 created: 2026-07-16
 closed:
 links: [docs/camera-notes.md, studio-001]
 ---
-Motivation, acceptance criteria, pointers to discussion.
+Motivation, acceptance criteria, and pointers to related discussion go here.
 ```
 
-`BACKLOG.md` is a generated one-line-per-issue index (never hand-edited); `DONE.md` is an
-append-only log of outcomes; `decisions/` holds immutable, dated ADRs. All writes go through
-the script:
+The headers in these files are the database. Three other files present views of it:
+
+- `BACKLOG.md` — a generated table of all open items, one line each. It is never edited by
+  hand; the script rebuilds it after every change.
+- `DONE.md` — an append-only log of completed and dropped items, with their outcomes.
+- `decisions/` — a folder of dated architecture decision records (ADRs). An ADR is never
+  edited after the fact; if a decision changes, a new ADR supersedes the old one.
+
+All changes go through one script, `track.py`, which has no dependencies beyond Python 3.9:
 
 ```sh
 python tools/track.py new --title "Orbit camera" --area studio --type feature
@@ -44,140 +55,175 @@ python tools/track.py list --open --sort priority
 python tools/track.py close studio-010 --outcome "done (a1b2c3d)"
 ```
 
-Lifecycle: **capture** (anything trackable becomes an issue, immediately) → **triage**
-(weekly ~10 min: set priority/effort/risk, promote `idea` → `ready`, drop dead ones) →
-**plan/work** (`in-progress`; substantial work links to a plan doc) → **close** (outcome
-logged to `DONE.md`; executed plan docs get an `EXECUTED` banner and move to an archive).
-Two type conventions worth noting: a `problem` (open design question) closes by producing an
-ADR, and `retire` (this should be deleted) is a first-class type, so deletion work is tracked
-like feature work. A **sprint** is a working set — the batch selected for parallel execution
-now — not a time-box.
+### The lifecycle
 
-## What problem it actually solves
+Work moves through four stages:
 
-Agent-worked repos accumulate dated plan docs and scratch TODOs that rot: nothing marks a
-plan as finished, so an agent re-executes stale work or silently drops an out-of-scope
-finding it noticed mid-task. WorkQuarry's one real idea is a test for what deserves a
-lifecycle-tracked record versus a plain doc:
+1. **Capture.** Anything worth tracking becomes an issue file the moment it comes up. This
+   includes ideas the user mentions in passing and problems an agent notices while working
+   on something else.
+2. **Triage.** About ten minutes a week: assign real priority, effort, and risk values to
+   new items, promote ideas that are ready to be worked on, and drop items that are dead.
+3. **Work.** An item being worked on is marked `in-progress`. Substantial work gets a
+   separate plan document, and the plan and the issue link to each other.
+4. **Close.** When work finishes, the script records the outcome in `DONE.md`. If there was
+   a plan document, it is stamped with an `EXECUTED` banner and moved to an archive folder,
+   so no agent will ever mistake it for live instructions.
 
-> **Does it have to change state or can it rot?** If it must move through a status, it's a
-> *record* and lives in `tracker/`. If it's finished the moment it's written (a design
-> writeup, a transcript), it's a *doc* and lives elsewhere.
+Two conventions are worth calling out. First, an open design question is its own item type,
+called a `problem`, and it closes by producing an ADR rather than a code change. Second,
+code that should be deleted is also its own type, called `retire`, so cleanup work is
+tracked with the same care as feature work. Finally, a **sprint** here is not a time-box; it
+is a *working set* — the batch of items selected to be worked on in parallel right now.
 
-Everything else — issue files, the generated backlog, the done-log, ADRs, the agent rules —
-falls out of that one distinction.
+### The skills
+
+Three skills (instruction files for Claude Code) do the thinking that the script cannot:
+
+- `/track-idea` captures an idea. Before filing, it searches the repository for related
+  work, then writes out the idea's assumptions, its major design decisions, possible
+  approaches, and the simplest implementation along with what that simple version gives up.
+- `/track-issue` does the same for bugs, technical debt, design problems, and retirement
+  candidates. It records symptoms, impact, affected code with file-and-line references, a
+  root-cause hypothesis, fix options, and how to prevent the problem from recurring.
+- `/track-backlog` shows what is in progress, runs triage, promotes items, and plans
+  sprints.
+
+These skills matter more than the file format. An issue filed through them reads like a
+short design document rather than a one-line title, which means the next agent to pick it up
+starts with real context instead of an empty box.
+
+## The problem it solves
+
+Repositories worked by AI agents accumulate planning documents and to-do lists quickly, and
+those documents rot. Nothing marks a plan as finished, so an agent that finds a stale plan
+may execute it again. Nothing gives a passing observation a home, so an agent that notices a
+bug while doing other work silently drops it.
+
+WorkQuarry's central idea is a simple test that decides where any piece of writing belongs:
+
+> **Does it have to change state?** If a document must move through statuses — open, in
+> progress, done — it is a *record*, and it lives in the tracker with an id and a status
+> field. If it is finished the moment it is written — a design essay, an analysis, a
+> transcript — it is a *document*, and it lives with the other documentation.
+
+Everything else in the system follows from that one distinction.
 
 ## Strengths
 
-- **Doc-vs-record test** is a genuinely crisp answer to a fuzzy problem most repos never
-  name explicitly. It's the one idea here that isn't just "GitHub Issues, but files."
-- **Plan-doc lifecycle** (an `EXECUTED <date>` banner + move to an archive folder) directly
-  targets the failure mode of agents re-running stale plans — a problem specific to
-  agent-worked repos that human-oriented trackers don't address.
-- **Architecture is sound and small.** Frontmatter = source of truth, `BACKLOG.md` =
-  generated view, `DONE.md` = append-only event log, one script as the only write path.
-  ~250 lines, zero third-party dependencies, readable end to end in five minutes.
-- **The elaboration skills are the real differentiator**, more than the tracker mechanics.
-  `/track-idea` and `/track-issue` force a related-work search before filing, then draft
-  assumptions, design forks, and a "simplest implementation + what you give up" section. That
-  prompt discipline is useful even bolted onto GitHub Issues or Linear — it doesn't need this
-  file format to be valuable.
-- **Sprint-as-parallel-working-set with an area-collision check** assumes multiple *agents*
-  work concurrently, not multiple humans on a calendar. That framing is underexplored
-  elsewhere and is the part most clearly built for agent teams rather than adapted from
-  human project management.
-- **`problem` → ADR closure** gives open design questions a first-class type with its own
-  closing action, instead of forcing them into `bug`/`feature`.
+- **The record-versus-document test** gives a crisp answer to a problem most projects never
+  name. It is the one idea here that is not simply "GitHub Issues, but files."
+- **The plan-document lifecycle** — the `EXECUTED` banner and the archive step — directly
+  prevents agents from re-running stale plans. This failure mode is specific to agent-worked
+  repositories, and mainstream trackers do not address it.
+- **The architecture is small and sound.** File headers are the single source of truth, the
+  backlog is a generated view, and the done-log is append-only. One script is the only write
+  path. The whole thing is about 250 lines of Python with no dependencies, readable end to
+  end in a few minutes.
+- **The elaboration skills are the real contribution.** Forcing a search for related work
+  before filing, and requiring an assumptions list and a simplest-implementation section,
+  produces issues of unusually high quality. This discipline would be valuable even for a
+  team using GitHub Issues or Linear.
+- **Sprints are designed for parallel agents.** The sprint-planning skill checks that
+  selected items do not touch the same code areas, because two agents editing the same files
+  creates merge conflicts. This treats agents, not calendar weeks, as the unit of planning.
+- **Design questions are first-class.** A `problem` closes with a recorded decision, not a
+  commit, so architectural choices leave a permanent trail.
 
 ## Weaknesses and untested claims
 
-- **Single-writer by construction.** Ids are `max(existing) + 1` — two branches filing
-  concurrently collide. `BACKLOG.md` is a single generated file — two branches that both
-  touch the tracker will merge-conflict on it. Fine for one person plus their agents on a
-  mainline branch (the design point); not fine for a team without changes (collision-safe
-  ids, a merge-friendly index, an assignee field — none of which exist yet).
-- **Unproven over time.** Extracted 2026-07-18 from a tracker then only two days old. The
-  architecture's own stated risk — "weekly triage or the backlog becomes the new rot" — has
-  not yet been tested by actually failing to triage for a month. Rot-resistance is stated
-  intent, not yet demonstrated behavior.
-- **Regex frontmatter parsing, not a YAML library.** Deliberate (zero dependencies), but the
-  schema must stay flat and simple; anything nested or exotic will not round-trip.
-- **Discipline-dependent, not enforced.** Nothing checks that triage happens, that closed
-  issues get banners, or that vendored copies haven't drifted (`install.py --check` exists
-  for the drift case, but nothing runs it automatically — no CI, no hook, by default).
-- **Skills are Claude Code-specific.** `track.py` and the process are agent-agnostic (any
-  agent that can read, write, and grep files can follow them), but the three skills rely on
-  Claude Code's `.claude/skills/` discovery specifically.
-- **No UI.** CLI + file reads only. Fine for agents and terminal-first developers; a
-  non-technical stakeholder gets nothing here.
+- **It is built for a single writer.** New ids are computed as the highest existing number
+  plus one, so two branches filing at the same time will collide. The generated `BACKLOG.md`
+  will produce merge conflicts whenever two branches both change the tracker. This is
+  acceptable for one person and their agents committing to one main branch — which is the
+  design point — but a team would need collision-safe ids, a merge-friendly index, and an
+  assignee field, none of which exist yet.
+- **It is unproven over time.** This mechanism was extracted on 2026-07-18 from a tracker
+  that was itself only two days old. Its own founding decision record names the main risk:
+  if weekly triage does not happen, the backlog becomes the new source of rot. That claim
+  has not yet been tested by real neglect.
+- **The YAML parsing is intentionally naive.** The script parses headers with regular
+  expressions rather than a YAML library, which keeps it dependency-free but means the
+  schema must stay flat. Nested structures will not survive a round-trip.
+- **Nothing is enforced automatically.** No hook or CI job checks that triage happens, that
+  closed plans get banners, or that installed copies have not drifted from this repository.
+  An `install.py --check` command exists for the drift case, but nothing runs it for you.
+- **The skills are Claude Code-specific.** The script and the process work with any agent
+  that can read and write files, but the three skills depend on Claude Code's skill
+  discovery mechanism.
+- **There is no user interface.** Everything happens through the command line and file
+  reads. Developers and agents are well served; a non-technical stakeholder gets nothing.
 
-## Prior art — this is not a new idea
+## Prior art
 
-In-repo, markdown-based, agent-friendly trackers are an active space, not a gap WorkQuarry
-discovered. Known comparable projects (verify current state before citing — this list may be
-stale):
+In-repository, markdown-based, agent-friendly trackers are an active area, and WorkQuarry
+did not invent the category. Two known relatives (verify their current state before citing
+them; this list may be stale):
 
-- **Backlog.md** — markdown tasks in-repo with a CLI and a kanban web UI. Closer to a
-  human-facing tool with a nicer UX layer; WorkQuarry has no UI at all.
-- **beads** (Steve Yegge) — a git-backed, agent-first issue database. Closest conceptual
-  sibling — built explicitly for coding agents rather than adapted from human PM tools.
+- **Backlog.md** — markdown tasks in the repository, with a CLI and a kanban-style web
+  interface. It is closer to a human-facing tool; WorkQuarry has no interface at all.
+- **beads** (Steve Yegge) — a git-backed issue database built explicitly for coding agents.
+  This is the closest conceptual sibling.
 
-WorkQuarry's honest claim to distinctiveness is narrow: the doc-vs-record test, the plan-doc
-lifecycle, `problem`→ADR closure, sprint-as-parallel-working-set, and the elaboration
-skills. The underlying "markdown + frontmatter + generated index" pattern is not novel and
-is not presented as such.
+WorkQuarry's honest claim to originality is narrow: the record-versus-document test, the
+plan-document lifecycle, the `problem`-closes-with-an-ADR convention, sprints as parallel
+working sets, and the elaboration skills. The underlying pattern — markdown files, YAML
+headers, a generated index — is common property.
 
-## Use cases it fits today
+## Who it is for
 
-- A solo developer (or small team on a single mainline, no parallel tracker edits) working
-  with one or more coding agents, who wants tracked work to live and version with the code
-  instead of in a separate web app.
-- A repo already suffering from dated-plan-doc rot, where the doc-vs-record test and the
-  EXECUTED-banner convention directly fix a known failure mode.
-- Anyone who wants the elaboration prompts and is willing to adapt them to their own
-  tracker, even without adopting the file format.
+- A solo developer, or a small team committing to a single main branch, who works with one
+  or more coding agents and wants tracked work to live and version with the code.
+- A repository already suffering from stale-plan rot, where the record-versus-document test
+  and the `EXECUTED` banner fix a known failure mode directly.
+- Anyone who wants the elaboration skills and is willing to adapt them to a different
+  tracker. They do not depend on this file format.
 
-## Use cases it does not fit yet
+## Who it is not for, yet
 
-- Any team where more than one person/agent-session commits tracker changes on parallel
-  branches — id collisions and `BACKLOG.md` merge conflicts are unresolved.
-- Anyone who needs a UI, notifications, or reporting beyond a CLI list command and grep.
-- Anyone who needs tracked-work history to predate adoption — numbering starts fresh.
+- Teams where more than one person or agent session changes the tracker on parallel
+  branches. Id collisions and backlog merge conflicts are unsolved.
+- Anyone who needs a user interface, notifications, or reporting beyond a command-line list.
+- Anyone who needs their existing issue history migrated in. Numbering starts fresh.
 
-## What's in this repository
+## What is in this repository
 
-| Path | Installs to (in a consuming repo) | Role |
-|------|-----------------------------------|------|
-| `track.py` | `tools/track.py` | the one mutation path (new/set/list/close/index) |
-| `process.md` | `tracker/readme.md` | the process spec agents read |
-| `templates/` | `tracker/{issues,decisions}/_template.md` | issue + ADR shapes |
-| `skills/` | `.claude/skills/track-*` | the elaboration skills |
-| `AGENTS-snippet.md` | a marker-delimited block in `AGENTS.md` | the non-negotiable agent rules |
-| `tracker/config.example.json` | `tracker/config.json` | your areas + paths (the only local config) |
-| `install.py` | — (run directly) | copies the above into a target repo, checks for drift |
+| Path | Installed to (in your repository) | Purpose |
+|------|-----------------------------------|---------|
+| `track.py` | `tools/track.py` | the single write path: new, set, list, close, index |
+| `process.md` | `tracker/readme.md` | the process specification that agents read |
+| `templates/` | `tracker/{issues,decisions}/_template.md` | blank issue and ADR files |
+| `skills/` | `.claude/skills/track-*` | the three elaboration skills |
+| `AGENTS-snippet.md` | a marked block inside `AGENTS.md` | the rules agents must follow |
+| `tracker/config.example.json` | `tracker/config.json` | your area names and paths — the only per-repository configuration |
+| `install.py` | not installed; run directly | copies the files above into place and checks for drift |
 
-Your actual issues, backlog, done-log, and ADRs are instance data. They live in the
-*consuming* repo, never in this one.
+Your actual issues, backlog, done-log, and decision records are your data. They live in your
+repository and never in this one.
 
-## Install (in a consuming repo)
+## Installation
+
+Add this repository as a submodule and run the installer:
 
 ```sh
 git submodule add https://github.com/ara3d/workquarry submodules/workquarry
 python submodules/workquarry/install.py
-# then edit tracker/config.json — set your own areas
 ```
 
-Update after pulling a new version:
+Then edit `tracker/config.json` and replace the example area names with your own.
+
+To update after a new version is published:
 
 ```sh
 git submodule update --remote submodules/workquarry
 python submodules/workquarry/install.py
-python submodules/workquarry/install.py --check   # verify nothing drifted
+python submodules/workquarry/install.py --check   # confirm nothing has drifted
 ```
 
-Vendored copies carry a `GENERATED` banner. Edit the mechanism here, in this repo, and
-re-run the installer — never hand-edit the copies. Prefer not to use submodules? Copy the
-files by hand; `install.py` just automates placement. Python 3.9+, no dependencies.
+Each installed copy carries a banner marking it as generated. Make improvements in this
+repository and re-run the installer; never edit the installed copies directly. If you prefer
+not to use submodules, you can simply copy the files by hand — the installer only automates
+placement. Requires Python 3.9 or later, with no third-party packages.
 
 ## License
 
