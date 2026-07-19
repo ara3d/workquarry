@@ -1,0 +1,9 @@
+{
+  "_comment": "Copy to tracker/config.json and edit. 'areas' are your issue-id prefixes (area-NNN). In a monorepo, one area per subproject; the numbering is globally unique across areas.",
+  "areas": ["core", "docs", "infra"],
+  "paths": {
+    "issues": "tracker/issues",
+    "backlog": "tracker/BACKLOG.md",
+    "done": "tracker/DONE.md"
+  }
+}
