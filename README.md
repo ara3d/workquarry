@@ -88,8 +88,11 @@ Three skills (instruction files for Claude Code) do the thinking that the script
   root-cause hypothesis, fix options, and how to prevent the problem from recurring.
 - `/track-backlog` shows what is in progress, runs triage, promotes items, and plans
   sprints.
+- `/write-readme` is a companion skill, independent of the tracker: it writes or reviews a
+  project README in plain technical-writer prose — problem solved and not solved, tested
+  versus untested, trade-offs, and prior art. This repository's own README follows it.
 
-These skills matter more than the file format. An issue filed through them reads like a
+The tracker skills matter more than the file format. An issue filed through them reads like a
 short design document rather than a one-line title, which means the next agent to pick it up
 starts with real context instead of an empty box.
 
@@ -149,8 +152,8 @@ Everything else in the system follows from that one distinction.
   closed plans get banners, or that installed copies have not drifted from this repository.
   An `install.py --check` command exists for the drift case, but nothing runs it for you.
 - **The skills are Claude Code-specific.** The script and the process work with any agent
-  that can read and write files, but the three skills depend on Claude Code's skill
-  discovery mechanism.
+  that can read and write files, but the skills depend on Claude Code's skill discovery
+  mechanism.
 - **There is no user interface.** Everything happens through the command line and file
   reads. Developers and agents are well served; a non-technical stakeholder gets nothing.
 
@@ -193,7 +196,7 @@ headers, a generated index — is common property.
 | `track.py` | `tools/track.py` | the single write path: new, set, list, close, index |
 | `process.md` | `tracker/readme.md` | the process specification that agents read |
 | `templates/` | `tracker/{issues,decisions}/_template.md` | blank issue and ADR files |
-| `skills/` | `.claude/skills/track-*` | the three elaboration skills |
+| `skills/` | `.claude/skills/<name>` | the three tracker skills plus `write-readme` |
 | `AGENTS-snippet.md` | a marked block inside `AGENTS.md` | the rules agents must follow |
 | `tracker/config.example.json` | `tracker/config.json` | your area names and paths — the only per-repository configuration |
 | `install.py` | not installed; run directly | copies the files above into place and checks for drift |

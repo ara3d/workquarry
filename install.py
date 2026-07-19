@@ -35,6 +35,7 @@ MECHANISM = {
     "skills/track-idea/SKILL.md": ".claude/skills/track-idea/SKILL.md",
     "skills/track-issue/SKILL.md": ".claude/skills/track-issue/SKILL.md",
     "skills/track-backlog/SKILL.md": ".claude/skills/track-backlog/SKILL.md",
+    "skills/write-readme/SKILL.md": ".claude/skills/write-readme/SKILL.md",
 }
 
 
