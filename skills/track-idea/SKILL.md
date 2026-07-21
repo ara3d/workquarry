@@ -40,7 +40,7 @@ One-paragraph restatement, including your interpretation of anything ambiguous.
 Bullet list: what must be true for this to be worth doing (user need, technical precondition, dependency on other work).
 
 ## Design decisions
-Forks that change the direction — each as "Question — option A vs B, what each implies". These become ADRs if the idea graduates.
+Decision points that change the direction — each as "Question — option A vs B, what each implies". These become ADRs if the idea graduates.
 
 ## Related
 - [id or path] — one line on the relationship (overlaps / depends on / supersedes / informed by).
