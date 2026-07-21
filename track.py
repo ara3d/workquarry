@@ -16,10 +16,13 @@ Usage:
                             [--sprint NAME] [--open] [--sort priority|id|status|sprint]
                             [--format table|csv]
   python tools/track.py close ID [--outcome "done (abc1234)"] [--dropped]
+  python tools/track.py report [--html PATH] [--md PATH]  # shareable snapshot
   python tools/track.py index      # regenerate BACKLOG.md from frontmatter
   python tools/track.py next-id    # print next available issue number
 
 new/set/close regenerate BACKLOG.md automatically. Never hand-edit BACKLOG.md.
+report renders a point-in-time snapshot (Markdown to stdout with no path);
+it never writes into the tracker's own data.
 """
 import argparse, csv, datetime, io, json, re, sys
 from pathlib import Path
@@ -128,6 +131,138 @@ def regen_index() -> None:
             f"| {i.get('priority','?')} | {i.get('effort','?')} | {i.get('risk','?')} "
             f"| {i.get('area','')} | {i.get('status','')} | {i.get('sprint','')} |")
     BACKLOG.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+# ---- reports -------------------------------------------------------------
+# A report is a point-in-time, shareable snapshot rendered from the same
+# frontmatter that feeds BACKLOG.md — Markdown to paste into a PR/issue, or a
+# single self-contained HTML file to open in a browser or email. No template
+# engine and no dependencies; the HTML embeds its own CSS.
+
+OPEN_GROUPS = [("in-progress", "In progress"), ("ready", "Ready"), ("idea", "Ideas")]
+DONE_LIMIT = 25  # most-recent DONE.md entries shown in a report
+
+REPORT_CSS = """
+body{font:14px/1.55 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1a1d21;max-width:1080px;margin:2rem auto;padding:0 1.5rem}
+h1{font-size:1.5rem;margin:0 0 .2rem}
+p.meta{color:#6a7280;margin:0 0 1.25rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1.75rem}
+.chip{background:#f2f4f7;border:1px solid #e3e7ec;border-radius:999px;padding:.22rem .75rem;font-size:.82rem;color:#42484f}
+.chip b{color:#111}
+h2{font-size:1.05rem;margin:1.75rem 0 .5rem;border-bottom:1px solid #eceef1;padding-bottom:.3rem}
+h2 .ct{color:#9aa1a9;font-weight:400;font-size:.9rem}
+table{border-collapse:collapse;width:100%;font-size:.85rem;margin:0 0 .4rem}
+th,td{text-align:left;padding:.38rem .65rem;border-bottom:1px solid #eef0f3;vertical-align:top}
+th{color:#7a828b;font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+td.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap}
+.pri-p1{color:#b42318;font-weight:600}
+.empty{color:#9aa1a9;font-style:italic}
+ul.done{list-style:none;padding:0;margin:0}
+ul.done li{padding:.28rem 0;border-bottom:1px solid #f4f5f7;font-size:.85rem}
+a{color:#175cd3;text-decoration:none}
+p.foot{color:#9aa1a9;font-size:.78rem;margin-top:2rem}
+@media print{body{margin:0;max-width:none}a{color:inherit}}
+"""
+
+
+def _esc(s) -> str:
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def open_grouped() -> tuple[list, list]:
+    """Return ([(status, label, [items sorted by priority])], all_open)."""
+    opens = open_issues()
+    groups = [(st, lbl, sorted((i for i in opens if i.get("status") == st),
+                               key=lambda r: (PRI_ORDER.get(r.get("priority", "?"), 4), r.get("id", ""))))
+              for st, lbl in OPEN_GROUPS]
+    return groups, opens
+
+
+def done_entries(limit: int = DONE_LIMIT) -> list[str]:
+    if not DONE.exists():
+        return []
+    return [l for l in DONE.read_text(encoding="utf-8").splitlines() if l.startswith("- ")][:limit]
+
+
+def report_md() -> str:
+    groups, opens = open_grouped()
+    counts = "  ·  ".join(f"**{lbl.lower()}** {len(items)}" for _, lbl, items in groups)
+    out = [f"# WorkQuarry report — {today()}", "",
+           f"**Open:** {len(opens)}  ·  {counts}", ""]
+    hdr = "| id | title | type | pri | effort | risk | area | sprint |"
+    sep = "|----|-------|------|-----|--------|------|------|--------|"
+    for _st, label, items in groups:
+        out += [f"## {label} ({len(items)})", ""]
+        if not items:
+            out += ["_none_", ""]
+            continue
+        out += [hdr, sep]
+        for i in items:
+            out.append(f"| {i['id']} | {i.get('title','')} | {i.get('type','')} "
+                       f"| {i.get('priority','?')} | {i.get('effort','?')} | {i.get('risk','?')} "
+                       f"| {i.get('area','')} | {i.get('sprint','')} |")
+        out.append("")
+    if done := done_entries():
+        out += [f"## Recently done ({len(done)})", ""] + done + [""]
+    return "\n".join(out) + "\n"
+
+
+def _rows_html(items) -> str:
+    rows = []
+    for i in items:
+        pri = i.get("priority", "?")
+        cls = " class='pri-p1'" if pri == "p1" else ""
+        rows.append("<tr>"
+                    f"<td class='id'>{_esc(i['id'])}</td>"
+                    f"<td>{_esc(i.get('title',''))}</td>"
+                    f"<td>{_esc(i.get('type',''))}</td>"
+                    f"<td{cls}>{_esc(pri)}</td>"
+                    f"<td>{_esc(i.get('effort','?'))}</td>"
+                    f"<td>{_esc(i.get('risk','?'))}</td>"
+                    f"<td>{_esc(i.get('area',''))}</td>"
+                    f"<td>{_esc(i.get('sprint',''))}</td></tr>")
+    return "".join(rows)
+
+
+def report_html() -> str:
+    groups, opens = open_grouped()
+    chips = [f"<span class='chip'><b>{len(opens)}</b> open</span>"]
+    chips += [f"<span class='chip'><b>{len(items)}</b> {_esc(lbl.lower())}</span>" for _, lbl, items in groups]
+    cols = ["id", "title", "type", "pri", "effort", "risk", "area", "sprint"]
+    thead = "<tr>" + "".join(f"<th>{c}</th>" for c in cols) + "</tr>"
+    sections = []
+    for _st, label, items in groups:
+        body = _rows_html(items) or f"<tr><td colspan='{len(cols)}' class='empty'>none</td></tr>"
+        sections.append(f"<h2>{_esc(label)} <span class='ct'>({len(items)})</span></h2>"
+                        f"<table><thead>{thead}</thead><tbody>{body}</tbody></table>")
+    if done := done_entries():
+        lis = []
+        for line in done:
+            t = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"<a href='\2'>\1</a>", _esc(line[2:]))
+            lis.append(f"<li>{t}</li>")
+        sections.append(f"<h2>Recently done <span class='ct'>({len(done)})</span></h2>"
+                        f"<ul class='done'>{''.join(lis)}</ul>")
+    return (f"<!doctype html>\n<html lang='en'><head><meta charset='utf-8'>"
+            f"<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<title>WorkQuarry report — {today()}</title>\n<style>{REPORT_CSS}</style></head>\n"
+            f"<body>\n<h1>WorkQuarry report</h1>\n<p class='meta'>Generated {today()}</p>\n"
+            f"<div class='chips'>{''.join(chips)}</div>\n{''.join(sections)}\n"
+            f"<p class='foot'>Generated by "
+            f"<a href='https://github.com/ara3d/workquarry'>WorkQuarry</a>.</p>\n</body></html>\n")
+
+
+def cmd_report(a) -> None:
+    wrote = False
+    if a.html:
+        Path(a.html).write_text(report_html(), encoding="utf-8")
+        print(f"wrote {a.html}")
+        wrote = True
+    if a.md:
+        Path(a.md).write_text(report_md(), encoding="utf-8")
+        print(f"wrote {a.md}")
+        wrote = True
+    if not wrote:  # no output path: Markdown to stdout as UTF-8 so it pipes cleanly on any OS
+        sys.stdout.buffer.write(report_md().encode("utf-8"))
 
 
 def cmd_new(a) -> None:
@@ -258,6 +393,11 @@ def main() -> None:
     c.add_argument("--outcome", default="")
     c.add_argument("--dropped", action="store_true")
     c.set_defaults(func=cmd_close)
+
+    r = sub.add_parser("report", help="render a shareable HTML and/or Markdown snapshot")
+    r.add_argument("--html", help="write a standalone HTML report to this path")
+    r.add_argument("--md", help="write a Markdown report to this path")
+    r.set_defaults(func=cmd_report)
 
     sub.add_parser("index").set_defaults(func=lambda a: regen_index())
     sub.add_parser("next-id").set_defaults(func=lambda a: print(next_num()))

@@ -96,6 +96,80 @@ The tracker skills matter more than the file format. An issue filed through them
 short design document rather than a one-line title, which means the next agent to pick it up
 starts with real context instead of an empty box.
 
+## Example workflows
+
+The two sessions below show the system in daily use. The commands are what an agent runs; in
+practice you drive the agent in plain language and it runs them for you.
+
+### Capturing and completing a piece of work
+
+You mention an idea in passing — "the orbit camera should support panning." The agent files
+it immediately, before doing anything else:
+
+```sh
+python tools/track.py new --title "Orbit camera panning" --area studio --type feature
+```
+
+The `/track-idea` skill does more than allocate an id. It first searches the repository for
+related work, then fills the issue body with the idea's assumptions, the main design
+decisions, a couple of possible approaches, and the simplest implementation. The result reads
+like a short design note rather than a one-line title.
+
+Later, during triage, the item is given real values and marked ready to work:
+
+```sh
+python tools/track.py set studio-010 --status ready --priority p1 --effort M --risk low
+```
+
+When an agent picks the item up, it marks the item in progress, does the work, and closes it
+with the commit that finished it:
+
+```sh
+python tools/track.py set studio-010 --status in-progress
+python tools/track.py close studio-010 --outcome "done (a1b2c3d)"
+```
+
+The close step records the outcome in `DONE.md` and rebuilds `BACKLOG.md`. Nothing about the
+finished work is left for the next agent to misread.
+
+### Reviewing the backlog and sharing a report
+
+Once a week, the `/track-backlog` skill runs the ten-minute triage sweep: it shows what is in
+progress, assigns priority and effort to new items, promotes ideas that are ready, and drops
+dead ones. To share the current state with someone who does not work at the command line,
+render a report (described in the next section):
+
+```sh
+python tools/track.py report --html tracker/report.html
+python tools/track.py report --md tracker/report.md
+```
+
+## Reports
+
+The `report` command renders a point-in-time snapshot of the tracker from the same issue
+headers that feed `BACKLOG.md`. It produces a shareable artifact in either or both of two
+formats:
+
+- `--html PATH` writes a single self-contained HTML file. Its styling is embedded, so the
+  file has no external dependencies: it opens in any browser, attaches to an email, or drops
+  into a pull request. Open items are grouped by status — in progress, ready, ideas — with
+  priority-one items highlighted, and a final section lists the most recently completed work.
+- `--md PATH` writes the same snapshot as Markdown, for pasting into a pull request, an issue,
+  or a chat message.
+
+```sh
+python tools/track.py report --html tracker/report.html --md tracker/report.md
+python tools/track.py report            # no path: prints the Markdown report to stdout
+```
+
+With no path, the command prints the Markdown report to standard output, so it composes with
+other command-line tools. The report is read-only: it never writes into the tracker's own
+data.
+
+A report is a snapshot taken the moment you run the command, not a live dashboard. It does not
+refresh itself, draw charts, or track throughput over time. For history, read `DONE.md`; for
+ad-hoc queries, use `python tools/track.py list`.
+
 ## The problem it solves
 
 Repositories worked by AI agents accumulate planning documents and to-do lists quickly, and
@@ -121,8 +195,9 @@ Everything else in the system follows from that one distinction.
   repositories, and mainstream trackers do not address it.
 - **The architecture is small and sound.** File headers are the single source of truth, the
   backlog is a generated view, and the done-log is append-only. One script is the only write
-  path. The whole thing is about 250 lines of Python with no dependencies, readable end to
-  end in a few minutes.
+  path. The whole thing is about 400 lines of Python with no dependencies (roughly a third of
+  that is the on-demand HTML and Markdown report renderer), readable end to end in a few
+  minutes.
 - **The elaboration skills are the real contribution.** Forcing a search for related work
   before filing, and requiring an assumptions list and a simplest-implementation section,
   produces issues of unusually high quality. This discipline would be valuable even for a
@@ -154,8 +229,10 @@ Everything else in the system follows from that one distinction.
 - **The skills are Claude Code-specific.** The script and the process work with any agent
   that can read and write files, but the skills depend on Claude Code's skill discovery
   mechanism.
-- **There is no user interface.** Everything happens through the command line and file
-  reads. Developers and agents are well served; a non-technical stakeholder gets nothing.
+- **There is no live user interface.** Everything happens through the command line and file
+  reads. Developers and agents are well served; a non-technical stakeholder can be handed a
+  static HTML or Markdown report on demand (see *Reports*), but there is no interactive tool,
+  dashboard, or notification — the report is a snapshot, not a live view.
 
 ## Prior art
 
@@ -186,14 +263,15 @@ headers, a generated index — is common property.
 
 - Teams where more than one person or agent session changes the tracker on parallel
   branches. Id collisions and backlog merge conflicts are unsolved.
-- Anyone who needs a user interface, notifications, or reporting beyond a command-line list.
+- Anyone who needs a live, interactive user interface, notifications, or reporting richer
+  than a static HTML or Markdown snapshot — no charts, no history, no auto-refresh.
 - Anyone who needs their existing issue history migrated in. Numbering starts fresh.
 
 ## What is in this repository
 
 | Path | Installed to (in your repository) | Purpose |
 |------|-----------------------------------|---------|
-| `track.py` | `tools/track.py` | the single write path: new, set, list, close, index |
+| `track.py` | `tools/track.py` | the single write path plus queries and reports: new, set, list, close, report, index |
 | `process.md` | `tracker/readme.md` | the process specification that agents read |
 | `templates/` | `tracker/{issues,decisions}/_template.md` | blank issue and ADR files |
 | `skills/` | `.claude/skills/<name>` | the three tracker skills plus `write-readme` |

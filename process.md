@@ -26,6 +26,7 @@ event log, not a cache: the outcome text lives only there.
 - `python tools/track.py set <id> --status ready --priority p1 ... [--sprint NAME|none]` — the ONLY way to change status/priority/effort/risk/sprint (updates frontmatter + regenerates index).
 - `python tools/track.py list [--open] [--status S] [--area A] [--type T] [--sprint N] [--sort priority|id|status|sprint|created] [--format table|csv]` — query views.
 - `python tools/track.py close <id> [--outcome "done (sha)"] [--dropped]` — closes the issue, logs to DONE.md, regenerates index.
+- `python tools/track.py report [--html PATH] [--md PATH]` — renders a shareable point-in-time snapshot (open items grouped by status, plus recent DONE) as a standalone HTML file and/or Markdown; with no path, prints Markdown to stdout. Read-only: never writes into the tracker's own data.
 - `python tools/track.py index` — regenerate BACKLOG.md (normally automatic).
 - `python tools/track.py next-id` — peek at the next number.
 - `/track-idea`, `/track-issue`, `/track-backlog` — Claude Code skills (`.claude/skills/`) that drive the script **and** elaborate: assumptions, design decisions, related-work links, approaches, simplest implementation. See each skill for details.
