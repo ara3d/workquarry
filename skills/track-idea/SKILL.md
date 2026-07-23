@@ -54,7 +54,12 @@ Adjacent ideas worth their own issue: bullet list (see step 6).
 The version of this change that leaves the architecture stronger: name the specific seam, invariant, boundary, or file it strengthens, and what future changes it makes cheaper or safer. Then a one-line verdict: **simplest / right / simplest-along-the-grain**. When the verdict is simplest-along-the-grain, state exactly what the simple version must NOT do so the stronger design stays reachable.
 
 ## Done means
-2–5 verifiable statements of what "done" looks like ("done means X passes / Y no longer reproduces / Z benchmark ≤ N ms"). Optional at capture; required before idea→ready promotion for feature/debt/bug.
+2–5 verifiable statements of what "done" looks like, written as checkboxes. Optional at capture; required before idea→ready promotion for feature/debt/bug.
+- [ ] X passes
+- [ ] Y no longer reproduces
+- [ ] Z benchmark ≤ N ms
+
+Whoever lands the work ticks these in the commit that satisfies them; when all are ticked the item is closed in the following commit. Progress is read from these boxes — never stored as a percentage.
 
 ## Simplest possible implementation
 The smallest thing that could possibly work. Then pros/cons in two bullet lists: what you get, what you give up or risk.

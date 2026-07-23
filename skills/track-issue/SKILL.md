@@ -65,7 +65,12 @@ Why this priority: severity × frequency, what it blocks, cost of deferral.
 The version of this fix that leaves the architecture stronger — patch the symptom vs. fix the invariant. Name the specific seam, invariant, boundary, or file it strengthens (the invariant the bug violated, the boundary that let it through), and what future changes it makes cheaper or safer. Then a one-line verdict: **simplest / right / simplest-along-the-grain**. When the verdict is simplest-along-the-grain, state exactly what the simple fix must NOT do so the stronger design stays reachable.
 
 ## Done means
-2–5 verifiable statements of what "fixed" looks like ("done means the repro no longer reproduces / X test passes / Y benchmark ≤ N ms"). Optional at capture; required before promotion to `ready` for bug/debt/feature.
+2–5 verifiable statements of what "fixed" looks like, written as checkboxes. Optional at capture; required before promotion to `ready` for bug/debt/feature. Include the verification step as its own box when a fix needs runtime confirmation — a landed fix awaiting verification is not done.
+- [ ] the repro no longer reproduces
+- [ ] regression test added and passing
+- [ ] verified in the running app
+
+Whoever lands the fix ticks these in the commit that satisfies them; when all are ticked the item is closed in the following commit. Progress is read from these boxes — never stored as a percentage.
 
 ## Simplest fix
 Smallest change that resolves it, with pros/cons: what you get, what you give up or risk.

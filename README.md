@@ -64,11 +64,17 @@ Work moves through four stages:
    on something else.
 2. **Triage.** About ten minutes a week: assign real priority, effort, and risk values to
    new items, promote ideas that are ready to be worked on, and drop items that are dead.
-3. **Work.** An item being worked on is marked `in-progress`. Substantial work gets a
-   separate plan document, and the plan and the issue link to each other.
-4. **Close.** When work finishes, the script records the outcome in `DONE.md`. If there was
-   a plan document, it is stamped with an `EXECUTED` banner and moved to an archive folder,
-   so no agent will ever mistake it for live instructions.
+3. **Work.** An item being worked on is marked `in-progress`. Every commit that does work on it
+   names its id in the commit scope, and ticks whichever `## Done means` checkboxes that commit
+   satisfies. Progress is therefore read from the criteria themselves; there is no percentage
+   field to keep up to date, and an unticked box names the specific thing still outstanding.
+   Substantial work gets a separate plan document, and the plan and the issue link to each other.
+4. **Close.** An item is closed as soon as its last checkbox is ticked — in the commit
+   immediately after the one that finished the work, which is the first moment the finishing
+   commit's hash exists. The script records that hash as the outcome in `DONE.md`. Completion is
+   never inferred from commit history alone: a landed fix with an unticked verification box is
+   not done. If there was a plan document, it is stamped with an `EXECUTED` banner and moved to
+   an archive folder, so no agent will ever mistake it for live instructions.
 
 Two conventions are worth calling out. First, an open design question is its own item type,
 called a `problem`, and it closes by producing an ADR rather than a code change. Second,

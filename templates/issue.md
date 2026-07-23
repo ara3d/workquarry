@@ -16,4 +16,7 @@ links: []
 Motivation / context. One paragraph is plenty.
 
 ## Done means
-2–5 verifiable statements of what "done" looks like (optional for ideas; required before idea→ready promotion for feature/debt/bug).
+2–5 verifiable statements of what "done" looks like (optional for ideas; required before idea→ready promotion for feature/debt/bug). Ticked by whoever lands the work, in the commit that satisfies them; all ticked → close in the following commit.
+
+- [ ] first criterion
+- [ ] second criterion

@@ -92,7 +92,22 @@ Write one only when a decision is expensive to reverse or likely to be re-litiga
 - **Check status before executing any plan.** A plan doc without a live linked issue in `in-progress`/`ready` state, or carrying an EXECUTED banner, is historical — ask before acting on it.
 - **File what you find.** Out-of-scope debt, bugs, or retire candidates discovered mid-task: create an issue file + BACKLOG line, don't fix inline and don't let it evaporate.
 - **Commit tracker changes immediately.** Every time you create or update an issue, regenerate `BACKLOG.md` if it changed (`new`/`set`/`close` already do this), then `git add` **both** the issue file(s) and `BACKLOG.md` and commit them together. Never leave an issue file or a stale `BACKLOG.md` uncommitted, and never commit one without the other.
-- **Close what you finish.** End of any session that completes tracked work: update issue status, move the BACKLOG line to DONE, banner the plan doc. This replaces per-session report docs.
+- **Name the item in the commit.** Any commit doing work on a tracked item names that item's id in
+  the Conventional-Commits scope — `fix(studio-149): atomic menu clear+rebuild`. This is the join
+  key between git history and tracker state. Tracker bookkeeping commits (`docs(tracker):`,
+  `chore(tracker):`) are not work commits and never count as progress on an item.
+- **Mark progress at the commit that makes it — close what you finish, when you finish it.**
+  In the same commit that lands work, tick every `## Done means` checkbox that commit satisfies.
+  Progress is *read from* those boxes; there is no stored progress field or percentage.
+  - If every box is now ticked, close immediately:
+    `python tools/track.py close <id> --outcome "done (<work-commit-sha>)"`, then commit that
+    tracker change. The sha only exists once the work commit is made, so the close is the
+    immediately-following commit — not an end-of-session chore that gets forgotten.
+  - If any box is unticked, the item stays `in-progress`, and you say which box is outstanding.
+    A landed fix awaiting verification is not done.
+
+  Never infer completion from commit history alone: an unticked box is the item stating it is not
+  finished. At close, banner + archive the executed plan doc. This replaces per-session report docs.
 - **Ideas from the user** ("we should someday…") get captured as `type: idea` issues immediately.
 - **Don't re-litigate ADRs.** Check `decisions/` before proposing architecture changes; if you disagree with a decision, propose a superseding ADR rather than silently diverging.
 
