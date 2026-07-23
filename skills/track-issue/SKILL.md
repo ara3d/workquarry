@@ -61,6 +61,12 @@ Why this priority: severity × frequency, what it blocks, cost of deferral.
 ## Fix approaches
 1–3 options with one-line trade-offs. For problems: candidate answers; note that closing should produce an ADR + follow-up issues.
 
+## Bedrock
+The version of this fix that leaves the architecture stronger — patch the symptom vs. fix the invariant. Name the specific seam, invariant, boundary, or file it strengthens (the invariant the bug violated, the boundary that let it through), and what future changes it makes cheaper or safer. Then a one-line verdict: **simplest / right / simplest-along-the-grain**. When the verdict is simplest-along-the-grain, state exactly what the simple fix must NOT do so the stronger design stays reachable.
+
+## Done means
+2–5 verifiable statements of what "fixed" looks like ("done means the repro no longer reproduces / X test passes / Y benchmark ≤ N ms"). Optional at capture; required before promotion to `ready` for bug/debt/feature.
+
 ## Simplest fix
 Smallest change that resolves it, with pros/cons: what you get, what you give up or risk.
 
@@ -70,6 +76,8 @@ How to keep this class of issue from recurring:
 - Tests: the missing test that would have caught it (regression test = part of the fix; class-level test coverage = its own issue).
 - New features/tooling ideas (invariants, typed APIs, checks, CI gates) — offer to file each via /track-idea or as a capture-only issue.
 ```
+
+The **Bedrock** section may be a single line — "No architectural leverage here — simplest wins." — when that is true. What is NOT allowed: generic design-principle recitation that names no concrete file, seam, or invariant.
 
 Ground everything in what you actually found in step 2 — real paths, real symbols, no invented behavior.
 

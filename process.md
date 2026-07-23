@@ -57,7 +57,8 @@ links: []          # related docs, plans, discussions, other issues
 ```
 
 Status semantics: `idea` = captured, untriaged. `ready` = triaged (real priority/effort/risk,
-acceptance criteria for feature/debt) — an agent may pick it up. Promotion idea→ready happens
+plus a `## Done means` section — 2–5 verifiable acceptance criteria — required for
+feature/debt/bug) — an agent may pick it up. Promotion idea→ready happens
 via `track.py set` during triage. A **sprint** is a working set, not a time-box: the batch
 selected for parallel execution now — big rocks + little rocks, chosen for impact/risk balance
 and non-colliding areas (see `/track-backlog sprint plan`).

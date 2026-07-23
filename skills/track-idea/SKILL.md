@@ -50,9 +50,17 @@ Short term: 1–3 ways to get value soon.
 Long term: where this could go if it works.
 Adjacent ideas worth their own issue: bullet list (see step 6).
 
+## Bedrock
+The version of this change that leaves the architecture stronger: name the specific seam, invariant, boundary, or file it strengthens, and what future changes it makes cheaper or safer. Then a one-line verdict: **simplest / right / simplest-along-the-grain**. When the verdict is simplest-along-the-grain, state exactly what the simple version must NOT do so the stronger design stays reachable.
+
+## Done means
+2–5 verifiable statements of what "done" looks like ("done means X passes / Y no longer reproduces / Z benchmark ≤ N ms"). Optional at capture; required before idea→ready promotion for feature/debt/bug.
+
 ## Simplest possible implementation
 The smallest thing that could possibly work. Then pros/cons in two bullet lists: what you get, what you give up or risk.
 ```
+
+The **Bedrock** section may be a single line — "No architectural leverage here — simplest wins." — when that is true. What is NOT allowed: generic design-principle recitation that names no concrete file, seam, or invariant.
 
 Ground every claim in what you actually found in step 2 — no invented file names or capabilities. Where the repo already has a building block, name the file.
 

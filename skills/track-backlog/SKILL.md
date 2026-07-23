@@ -38,9 +38,9 @@ Recommend dropping ideas untouched for weeks with no champion — closing with
 ### promote <id>
 Promotion = `idea` → `ready` ("an agent may pick this up"). Before flipping:
 - priority/effort/risk must be real values, not `?`
-- `feature`/`debt` need acceptance criteria in the body — add them if missing
-  (one or two lines: what observable state means done)
-- `problem` needs no acceptance (it closes with an ADR)
+- `feature`/`debt`/`bug` REQUIRE a `## Done means` section (2–5 verifiable
+  statements) to exist in the body first — add it if missing before promoting
+- `problem` needs no acceptance criteria (it closes with an ADR)
 ```
 python tools/track.py set <id> --status ready --priority ... --effort ... --risk ...
 ```

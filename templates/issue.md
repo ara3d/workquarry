@@ -15,4 +15,5 @@ links: []
 
 Motivation / context. One paragraph is plenty.
 
-Acceptance: what "done" looks like (optional for ideas).
+## Done means
+2–5 verifiable statements of what "done" looks like (optional for ideas; required before idea→ready promotion for feature/debt/bug).

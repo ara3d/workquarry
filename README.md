@@ -78,16 +78,20 @@ is a *working set* — the batch of items selected to be worked on in parallel r
 
 ### The skills
 
-Three skills (instruction files for Claude Code) do the thinking that the script cannot:
+Four skills (instruction files for Claude Code) do the thinking that the script cannot:
 
 - `/track-idea` captures an idea. Before filing, it searches the repository for related
   work, then writes out the idea's assumptions, its major design decisions, possible
-  approaches, and the simplest implementation along with what that simple version gives up.
+  approaches, a **Bedrock** section — the version of the change that leaves the architecture
+  stronger, weighed against the simplest one with a staged verdict — and the simplest
+  implementation along with what that simple version gives up.
 - `/track-issue` does the same for bugs, technical debt, design problems, and retirement
   candidates. It records symptoms, impact, affected code with file-and-line references, a
-  root-cause hypothesis, fix options, and how to prevent the problem from recurring.
+  root-cause hypothesis, fix options, a Bedrock section that separates patching the symptom
+  from fixing the invariant, and how to prevent the problem from recurring.
 - `/track-backlog` shows what is in progress, runs triage, promotes items, and plans
-  sprints.
+  sprints. Promotion of a feature, debt, or bug to `ready` requires a `## Done means`
+  section — a few verifiable acceptance criteria — to be written first.
 - `/write-readme` is a companion skill, independent of the tracker: it writes or reviews a
   project README in plain technical-writer prose — problem solved and not solved, tested
   versus untested, trade-offs, and prior art. This repository's own README follows it.
